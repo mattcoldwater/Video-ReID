@@ -1,0 +1,6 @@
+# local vscode configure
+/.vscode/*
+
+# some local files
+*.pyc
+*.tar
