@@ -1,21 +1,23 @@
 ==========
-Args:Namespace(arch='resnet50tp', dataset='mars', eval_step=100, evaluate=False, gamma=0.1, gpu_devices='1', height=224, htri_only=False, lr=0.0003, margin=0.3, max_epoch=800, num_instances=4, pool='avg', pretrained_model='/home/jiyang/Workspace/Works/video-person-reid/3dconv-person-reid/pretrained_models/resnet-50-kinetics.pth', print_freq=80, resume=True, save_dir='log/resnet50tp', seed=1, seq_len=4, start_epoch=0, stepsize=200, test_batch=1, train_batch=32, use_cpu=False, weight_decay=0.0005, width=112, workers=8)
+Args:Namespace(arch='resnet50tp', dataset='viva', eval_step=100, evaluate=False, gamma=0.1, gpu_devices='1', height=224, htri_only=False, lr=0.0003, margin=0.3, max_epoch=800, num_instances=4, pool='avg', pretrained_model='3dconv-person-reid/pretrained_models/resnet-50-kinetics.pth', print_freq=80, resume=False, save_dir='log/resnet50tp', seed=1, seq_len=4, start_epoch=0, stepsize=200, test_batch=1, train_batch=32, use_cpu=False, weight_decay=0.0005, width=112, workers=8)
 ==========
 Currently using GPU 1
-Initializing dataset mars
-=> MARS loaded
+Initializing dataset viva
+=> Viva loaded
 Dataset statistics:
   ------------------------------
   subset   | # ids | # tracklets
   ------------------------------
-  train    |   625 |     8298
-  query    |   626 |     1980
-  gallery  |   622 |     9330
+  train    |   204 |      502
+  query    |    29 |       60
+  gallery  |   176 |      367
   ------------------------------
-  total    |  1251 |    19608
-  number of images per tracklet: 2 ~ 920, average 59.5
+  total    |   409 |      929
+  number of images per tracklet: 20 ~ 900, average 246.4
   ------------------------------
 Initializing model: resnet50tp
-Model size: 24.78866M
-Loading from Epoch 650
-==> Epoch 651/800
+Model size: 23.92603M
+==> Epoch 1/800
+==> Epoch 2/800
+==> Test
+Extracted features for set, obtained 60-by-2048 matrix

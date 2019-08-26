@@ -1,6 +1,8 @@
 This is forked from https://github.com/jiyanggao/Video-Person-ReID
 All weights are [Here](https://drive.google.com/open?id=1kQxbbsMX5OJnNDl9sBQNrIjRkFbnc_5c)
 
+See opt.py for more detailed instruction of running code on the command line.
+
 # Video-Person-ReID
 
 This is the code repository for tech report "Revisiting Temporal Modeling for Video-based Person ReID": https://arxiv.org/abs/1805.02104.
@@ -22,17 +24,22 @@ Although previous work proposed many temporal modeling methods and did extensive
 ### Dataset
 All experiments are done on MARS, as it is the largest dataset available to date for video-based person reID. Please follow [deep-person-reid](https://github.com/KaiyangZhou/deep-person-reid) to prepare the data. The instructions are copied here: 
 
-1. Create a directory named `mars/` under `data/`.
-2. Download dataset to `data/mars/` from http://www.liangzheng.com.cn/Project/project_mars.html.
+1. Create a directory named `mars/` under `../datasets/`.
+2. Download dataset to `../datasets/mars/` from http://www.liangzheng.com.cn/Project/project_mars.html.
 3. Extract `bbox_train.zip` and `bbox_test.zip`.
-4. Download split information from https://github.com/liangzheng06/MARS-evaluation/tree/master/info and put `info/` in `data/mars` (we want to follow the standard split in [8]). The data structure would look like:
+4. Download split information from https://github.com/liangzheng06/MARS-evaluation/tree/master/info and put `info/` in `../datasets/mars/` (we want to follow the standard split in [8]). The data structure would look like:
 ```
 mars/
     bbox_test/
     bbox_train/
     info/
 ```
-5. Use `-d mars` when running the training code.
+5. Use `-d mars` when running the code.
+
+For vivalab's dataset:
+1. Create a directory named `viva_dataset/viva_dataset/` under `../datasets/`.
+2. Download dataset to `../datasets/viva_dataset/viva_dataset/` 
+3. Use `-d viva` when running the code.
 
 ### Usage
 To train the model, please run

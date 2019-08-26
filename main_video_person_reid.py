@@ -196,16 +196,13 @@ def test(model, queryloader, galleryloader, pool, use_gpu, ranks=[1, 5, 10, 20])
     def extract_features(data_loader, pool='avg'):
         qf, q_pids, q_camids = [], [], []
         for batch_idx, (imgs, pids, camids) in enumerate(tqdm(data_loader)):
-            if use_gpu:
-                imgs = imgs.cuda()
-            # with torch.no_grad():
-            #     imgs = Variable(imgs)
-            # b=1, n=number of clips, s=16
             b, n, s, c, h, w = imgs.size()
             assert(b==1)
             imgs = imgs.view(b*n, s, c, h, w)
             with torch.no_grad():
+                if use_gpu: imgs = imgs.cuda()
                 features = model(imgs)
+
             features = features.view(n, -1)
             if pool == 'avg':
                 features = torch.mean(features, 0)

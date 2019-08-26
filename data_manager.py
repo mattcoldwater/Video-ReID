@@ -23,15 +23,16 @@ class Viva(object):
     
     Dataset statistics:
     # identities: 409
-    # tracklets: 450 (train) + 60 (query) + 369 (gallery)
+    # tracklets: 502 (train) + 60 (query) + 367 (gallery)
     # cameras: 2
 
     Args:
         min_seq_len (int): tracklet with length shorter than this value will be discarded (default: 0).
+        max_seq_len (int): tracklet with length shorter than this value will be splited (default: 900).
     """
-    root = '../viva_dataset/viva_dataset'
+    root = '../datasets/viva_dataset/viva_dataset'
 
-    def __init__(self, min_seq_len=0):
+    def __init__(self, min_seq_len=0, max_seq_len=900):
         self._check_before_run()
 
         all_ids = os.listdir(self.root)
@@ -48,11 +49,11 @@ class Viva(object):
         n_test_pids = n_pids - n_train_pids - n_query_pids
         train_names, query_names, gallery_names = all_ids[:n_train_pids], all_ids[n_train_pids:n_train_pids+n_query_pids], all_ids[n_train_pids+n_query_pids:]
 
-        train, num_train_tracklets, num_train_pids, num_train_imgs = self._process_data(train_names, min_seq_len=min_seq_len)
+        train, num_train_tracklets, num_train_pids, num_train_imgs = self._process_data(train_names, min_seq_len=min_seq_len, relabel=True, max_seq_len=max_seq_len)
 
-        query, num_query_tracklets, num_query_pids, num_query_imgs = self._process_data(query_names, min_seq_len=min_seq_len)
+        query, num_query_tracklets, num_query_pids, num_query_imgs = self._process_data(query_names, min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
 
-        gallery, num_gallery_tracklets, num_gallery_pids, num_gallery_imgs = self._process_data(gallery_names, min_seq_len=min_seq_len)
+        gallery, num_gallery_tracklets, num_gallery_pids, num_gallery_imgs = self._process_data(gallery_names, min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
 
         num_imgs_per_tracklet = num_train_imgs + num_query_imgs + num_gallery_imgs
         min_num = np.min(num_imgs_per_tracklet)
@@ -105,9 +106,10 @@ class Viva(object):
             c = int(temp['CAMERA'])
         return c
 
-    def _process_data(self, names, min_seq_len=0):
+    def _process_data(self, names, min_seq_len=0, relabel=False, max_seq_len=900):
         tracklets = []
         num_imgs_per_tracklet = []
+        if relabel: pid2label = {pid:label for label, pid in enumerate(names)}
 
         ## get all tracklets
         for pid in names:
@@ -122,9 +124,24 @@ class Viva(object):
                 assert len(set(camnames)) == 1, "Error: images are captured under different cameras!"
 
                 if len(img_paths) >= min_seq_len:
-                    img_paths = tuple(img_paths)
-                    tracklets.append((img_paths, int(pid), camnames[0]))
-                    num_imgs_per_tracklet.append(len(img_paths))  
+                    n_imgs = len(img_paths)
+                    if n_imgs > max_seq_len:
+                        cuts = n_imgs // max_seq_len # 8104 // 800 = 10           8000 // 800 = 10
+                        cuts = [i*max_seq_len for i in range(cuts)] # 0 800 1600 .. 7200
+                        cuts.append(len(cuts)*max_seq_len) # 0 800 1600 .. 7200 8000
+                        if n_imgs > cuts[-1]: cuts.append(n_imgs) # 0 800 1600 .. 7200 8000 8104
+                        for i in range(len(cuts)-1):
+                            img_path = img_paths[cuts[i]:cuts[i+1]]
+                            if len(img_path) >= min_seq_len:
+                                img_path = tuple(img_path)
+                                _pid = int(pid2label[pid]) if relabel else int(pid)
+                                tracklets.append((img_path, _pid, camnames[0]))
+                                num_imgs_per_tracklet.append(len(img_path))  
+                    else:
+                        img_paths = tuple(img_paths)
+                        _pid = int(pid2label[pid]) if relabel else int(pid)
+                        tracklets.append((img_paths, _pid, camnames[0]))
+                        num_imgs_per_tracklet.append(n_imgs)  
 
         num_tracklets = len(tracklets)
         num_pids = len(names)
@@ -146,7 +163,7 @@ class Mars(object):
     Args:
         min_seq_len (int): tracklet with length shorter than this value will be discarded (default: 0).
     """
-    root = '../mars'
+    root = '../datasets/mars'
     train_name_path = osp.join(root, 'info/train_name.txt')
     test_name_path = osp.join(root, 'info/test_name.txt')
     track_train_info_path = osp.join(root, 'info/tracks_train_info.mat')

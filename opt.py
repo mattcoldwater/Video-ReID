@@ -3,7 +3,8 @@ import argparse
 ## test
 # python main_video_person_reid.py --evaluate --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
 ## train
-## python main_video_person_reid.py --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
+# python main_video_person_reid.py --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
+# python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp
 
 parser = argparse.ArgumentParser(description='Train video model')
 # Datasets
