@@ -1,5 +1,10 @@
 import argparse
 
+## test
+# python main_video_person_reid.py --evaluate --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
+## train
+## python main_video_person_reid.py --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
+
 parser = argparse.ArgumentParser(description='Train video model')
 # Datasets
 parser.add_argument('-d', '--dataset', type=str, default='mars')
@@ -38,11 +43,11 @@ parser.add_argument('--pool', type=str, default='avg', choices=['avg', 'max'])
 # Miscs
 parser.add_argument('--print-freq', type=int, default=80, help="print frequency")
 parser.add_argument('--seed', type=int, default=1, help="manual seed")
-parser.add_argument('--pretrained-model', type=str, default='/home/jiyang/Workspace/Works/video-person-reid/3dconv-person-reid/pretrained_models/resnet-50-kinetics.pth', help='need to be set for resnet3d models')
+parser.add_argument('--pretrained-model', type=str, default='3dconv-person-reid/pretrained_models/resnet-50-kinetics.pth', help='need to be set for resnet3d models')
 parser.add_argument('--evaluate', action='store_true', help="evaluation only")
 parser.add_argument('--eval-step', type=int, default=100,
                     help="run evaluation for every N epochs (set to -1 to test after training)")
-parser.add_argument('--save-dir', type=str, default='log')
+parser.add_argument('--save-dir', type=str, default='log', help='must match where you (will) store the weight')
 parser.add_argument('--use-cpu', action='store_true', help="use cpu")
 parser.add_argument('--gpu-devices', default='1', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--resume', action='store_true', help="use best model before")

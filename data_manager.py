@@ -9,11 +9,127 @@ import zipfile
 import os.path as osp
 from scipy.io import loadmat
 import numpy as np
+import random
+from pathlib import Path
+import json
 
 from utils import mkdir_if_missing, write_json, read_json
 
 """Dataset classes"""
 
+class Viva(object):
+    """
+    Viva_dataset
+    
+    Dataset statistics:
+    # identities: 409
+    # tracklets: 450 (train) + 60 (query) + 369 (gallery)
+    # cameras: 2
+
+    Args:
+        min_seq_len (int): tracklet with length shorter than this value will be discarded (default: 0).
+    """
+    root = '../viva_dataset/viva_dataset'
+
+    def __init__(self, min_seq_len=0):
+        self._check_before_run()
+
+        all_ids = os.listdir(self.root)
+        
+        VRandom = random.Random(100)
+        VRandom.shuffle(all_ids)
+
+        # assert all_ids[:14] == [34073, 34530, 34368, 34088, 33966, 34382, 34475, 33897, 34362, 34061, 34437, 34254, 34166, 34089]
+
+        # split manually
+        n_pids = len(all_ids)
+        n_train_pids = n_pids // 2
+        n_query_pids = round((n_pids - n_train_pids) * 0.1419)
+        n_test_pids = n_pids - n_train_pids - n_query_pids
+        train_names, query_names, gallery_names = all_ids[:n_train_pids], all_ids[n_train_pids:n_train_pids+n_query_pids], all_ids[n_train_pids+n_query_pids:]
+
+        train, num_train_tracklets, num_train_pids, num_train_imgs = self._process_data(train_names, min_seq_len=min_seq_len)
+
+        query, num_query_tracklets, num_query_pids, num_query_imgs = self._process_data(query_names, min_seq_len=min_seq_len)
+
+        gallery, num_gallery_tracklets, num_gallery_pids, num_gallery_imgs = self._process_data(gallery_names, min_seq_len=min_seq_len)
+
+        num_imgs_per_tracklet = num_train_imgs + num_query_imgs + num_gallery_imgs
+        min_num = np.min(num_imgs_per_tracklet)
+        max_num = np.max(num_imgs_per_tracklet)
+        avg_num = np.mean(num_imgs_per_tracklet)
+
+        num_total_pids = num_train_pids + num_query_pids + num_gallery_pids
+        num_total_tracklets = num_train_tracklets + num_query_tracklets + num_gallery_tracklets
+
+        print("=> Viva loaded")
+        print("Dataset statistics:")
+        print("  ------------------------------")
+        print("  subset   | # ids | # tracklets")
+        print("  ------------------------------")
+        print("  train    | {:5d} | {:8d}".format(num_train_pids, num_train_tracklets))
+        print("  query    | {:5d} | {:8d}".format(num_query_pids, num_query_tracklets))
+        print("  gallery  | {:5d} | {:8d}".format(num_gallery_pids, num_gallery_tracklets))
+        print("  ------------------------------")
+        print("  total    | {:5d} | {:8d}".format(num_total_pids, num_total_tracklets))
+        print("  number of images per tracklet: {} ~ {}, average {:.1f}".format(min_num, max_num, avg_num))
+        print("  ------------------------------")
+
+        self.train = train
+        self.query = query
+        self.gallery = gallery
+
+        self.num_train_pids = num_train_pids
+        self.num_query_pids = num_query_pids
+        self.num_gallery_pids = num_gallery_pids
+
+    @staticmethod
+    def list_pictures(path):
+        paths = Path(path).glob('**/*.png')
+        return paths
+
+    def _check_before_run(self):
+        """Check if all files are available before going deeper"""
+        if not osp.exists(self.root):
+            raise RuntimeError("'{}' is not available".format(self.root))
+
+    @staticmethod
+    def camera(file_path):
+        """
+        :param file_path: unix style file path
+        :return: camera id
+        """
+        p = file_path.with_suffix('.json')
+        with p.open() as f:
+            temp = json.loads(f.read())
+            c = int(temp['CAMERA'])
+        return c
+
+    def _process_data(self, names, min_seq_len=0):
+        tracklets = []
+        num_imgs_per_tracklet = []
+
+        ## get all tracklets
+        for pid in names:
+            pid_path = osp.join(self.root, pid)
+            tracklet_paths = os.listdir(pid_path)
+            tracklet_paths = [osp.join(pid_path, t) for t in tracklet_paths]
+            for t_path in tracklet_paths:
+                img_paths = list(self.list_pictures(t_path))
+
+                # make sure all images are captured under the same camera
+                camnames = [self.camera(p) for p in img_paths]
+                assert len(set(camnames)) == 1, "Error: images are captured under different cameras!"
+
+                if len(img_paths) >= min_seq_len:
+                    img_paths = tuple(img_paths)
+                    tracklets.append((img_paths, int(pid), camnames[0]))
+                    num_imgs_per_tracklet.append(len(img_paths))  
+
+        num_tracklets = len(tracklets)
+        num_pids = len(names)
+
+        return tracklets, num_tracklets, num_pids, num_imgs_per_tracklet
 
 class Mars(object):
     """
@@ -425,6 +541,7 @@ __factory = {
     'mars': Mars,
     'ilidsvid': iLIDSVID,
     'prid': PRID,
+    'viva': Viva,
 }
 
 def get_names():
