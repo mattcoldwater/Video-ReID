@@ -24,6 +24,7 @@ from eval_metrics import evaluate
 from samplers import RandomIdentitySampler
 from tqdm import tqdm
 from opt import args
+from pathlib import Path
 
 import gc
 
@@ -49,9 +50,12 @@ def main():
     else:
         print("Currently using CPU (GPU is highly recommended)")
 
-    print("Initializing dataset {}".format(args.dataset))
-    dataset = data_manager.init_dataset(name=args.dataset)
+    if args.dataset == 'mars':
+        num_train_pids = 625
+    elif args.dataset == 'viva':
+        num_train_pids = 204
 
+    ## Initializing dataset
     transform_train = T.Compose([
         T.Random2DTranslation(args.height, args.width),
         T.RandomHorizontalFlip(),
@@ -65,32 +69,34 @@ def main():
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-    # pin_memory = True if use_gpu else False
-    pin_memory = False
+    pin_memory = False # pin_memory = True if use_gpu else False
 
+    if not args.simi:
+        print("Initializing dataset {}".format(args.dataset))
+        dataset = data_manager.init_dataset(name=args.dataset)
 
-    trainloader = DataLoader(
-        VideoDataset(dataset.train, seq_len=args.seq_len, sample='random',transform=transform_train),
-        sampler=RandomIdentitySampler(dataset.train, num_instances=args.num_instances),
-        batch_size=args.train_batch, num_workers=args.workers,
-        pin_memory=pin_memory, drop_last=True,
-    )
+        trainloader = DataLoader(
+            VideoDataset(dataset.train, seq_len=args.seq_len, sample='random',transform=transform_train),
+            sampler=RandomIdentitySampler(dataset.train, num_instances=args.num_instances),
+            batch_size=args.train_batch, num_workers=args.workers,
+            pin_memory=pin_memory, drop_last=True,
+        )
 
-    queryloader = DataLoader(
-        VideoDataset(dataset.query, seq_len=args.seq_len, sample='dense', transform=transform_test),
-        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
-        pin_memory=pin_memory, drop_last=False,
-    )
+        queryloader = DataLoader(
+            VideoDataset(dataset.query, seq_len=args.seq_len, sample='dense', transform=transform_test),
+            batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+            pin_memory=pin_memory, drop_last=False,
+        )
 
-    galleryloader = DataLoader(
-        VideoDataset(dataset.gallery, seq_len=args.seq_len, sample='dense', transform=transform_test),
-        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
-        pin_memory=pin_memory, drop_last=False,
-    )
+        galleryloader = DataLoader(
+            VideoDataset(dataset.gallery, seq_len=args.seq_len, sample='dense', transform=transform_test),
+            batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+            pin_memory=pin_memory, drop_last=False,
+        )
 
     print("Initializing model: {}".format(args.arch))
     if args.arch=='resnet503d':
-        model = resnet3d.resnet50(num_classes=dataset.num_train_pids, sample_width=args.width, sample_height=args.height, sample_duration=args.seq_len)
+        model = resnet3d.resnet50(num_classes=num_train_pids, sample_width=args.width, sample_height=args.height, sample_duration=args.seq_len)
         if not os.path.exists(args.pretrained_model):
             raise IOError("Can't find pretrained model: {}".format(args.pretrained_model))
         print("Loading checkpoint from '{}'".format(args.pretrained_model))
@@ -101,10 +107,10 @@ def main():
             state_dict[key.partition("module.")[2]] = checkpoint['state_dict'][key]
         model.load_state_dict(state_dict, strict=False)
     else:
-        model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids, loss={'xent', 'htri'})
+        model = models.init_model(name=args.arch, num_classes=num_train_pids, loss={'xent', 'htri'})
     print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
 
-    criterion_xent = CrossEntropyLabelSmooth(num_classes=dataset.num_train_pids, use_gpu=use_gpu)
+    criterion_xent = CrossEntropyLabelSmooth(num_classes=num_train_pids, use_gpu=use_gpu)
     criterion_htri = TripletLoss(margin=args.margin)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -125,6 +131,23 @@ def main():
 
     if use_gpu:
         model = nn.DataParallel(model).cuda()
+    
+    if args.simi:
+        print('Calculating similarity scores only')
+        data1 = [(tuple(list(Path(args.path1).glob('**/*.[jp][pn][g]'))), 0, 0), ]
+        data2 = [(tuple(list(Path(args.path2).glob('**/*.[jp][pn][g]'))), 0, 1), ]
+        loader1 = DataLoader(
+            VideoDataset(data1, seq_len=args.seq_len, sample='dense', transform=transform_test),
+            batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+            pin_memory=pin_memory, drop_last=False,
+        )
+        loader2 = DataLoader(
+            VideoDataset(data2, seq_len=args.seq_len, sample='dense', transform=transform_test),
+            batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+            pin_memory=pin_memory, drop_last=False,
+        )
+        test(model, loader1, loader2, args.pool, use_gpu, dtype='simi')
+        return
 
     if args.evaluate:
         print("Evaluate only")
@@ -197,7 +220,7 @@ def train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu
         if (batch_idx+1) % args.print_freq == 0:
             print("Batch {}/{}\t Loss {:.6f} ({:.6f})".format(batch_idx+1, len(trainloader), losses.val, losses.avg))
 
-def test(model, queryloader, galleryloader, pool, use_gpu, ranks=[1, 5, 10, 20]):
+def test(model, queryloader, galleryloader, pool, use_gpu, dtype='test', ranks=[1, 5, 10, 20]):
     model.eval()
 
     def extract_features(data_loader, pool='avg'):
@@ -250,6 +273,10 @@ def test(model, queryloader, galleryloader, pool, use_gpu, ranks=[1, 5, 10, 20])
     distmat = distmat.numpy()
     del qf, gf 
     gc.collect()
+
+    if dtype == 'simi':
+        print(distmat)
+        return
 
     print("Computing CMC and mAP")
     cmc, mAP = evaluate(distmat, q_pids, g_pids, q_camids, g_camids)

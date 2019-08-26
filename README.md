@@ -1,7 +1,14 @@
-This is forked from https://github.com/jiyanggao/Video-Person-ReID
-All weights are [Here](https://drive.google.com/open?id=1kQxbbsMX5OJnNDl9sBQNrIjRkFbnc_5c)
+This is forked from https://github.com/jiyanggao/Video-Person-ReID  
+All available weights are [Here](https://drive.google.com/open?id=1kQxbbsMX5OJnNDl9sBQNrIjRkFbnc_5c)
 
-See opt.py for more detailed instruction of running code on the command line.
+Train:  
+`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp`  
+Test:  
+`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp --resume --evaluate`  
+Claculating similarity score:  
+`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp --resume --simi --use-cpu`  
+
+See opt.py and below for more detailed instruction of running code on the command line.  
 
 # Video-Person-ReID
 
@@ -50,6 +57,9 @@ arch could be resnet50tp (Temporal Pooling), resnet50ta (Temporal Attention), re
 I found that learning rate has a significant impact on the final performance. Here are the learning rates I used (may not be the best): 0.0003 for temporal pooling, 0.0003 for temporal attention, 0.0001 for RNN, 0.0001 for 3D conv.
 
 Other detailed settings for different temporal modeling could be found in `models/ResNet.py`
+
+### Similarity score
+For calculating similarity score of 2 tracklets, set args.path1 and args.path2 for 2 tracklets' file paths separately.
 
 ### Performance of the paper
 
