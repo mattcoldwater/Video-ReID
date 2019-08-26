@@ -9,15 +9,12 @@ Dataset statistics:
   subset   | # ids | # tracklets
   ------------------------------
   train    |   204 |      502
-  query    |    29 |       60
-  gallery  |   176 |      367
+  query    |   205 |      150
+  gallery  |   205 |      208
   ------------------------------
-  total    |   409 |      929
-  number of images per tracklet: 20 ~ 900, average 246.4
+  total    |   409 |      860
+  number of images per tracklet: 20 ~ 900, average 245.4
   ------------------------------
 Initializing model: resnet50tp
 Model size: 23.92603M
 ==> Epoch 1/800
-==> Epoch 2/800
-==> Test
-Extracted features for set, obtained 60-by-2048 matrix

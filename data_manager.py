@@ -23,7 +23,7 @@ class Viva(object):
     
     Dataset statistics:
     # identities: 409
-    # tracklets: 502 (train) + 60 (query) + 367 (gallery)
+    # tracklets: 502 (train) + 150 (query) + 208 (gallery)
     # cameras: 2
 
     Args:
@@ -44,23 +44,19 @@ class Viva(object):
 
         # split manually
         n_pids = len(all_ids)
-        n_train_pids = n_pids // 2
-        n_query_pids = round((n_pids - n_train_pids) * 0.1419)
-        n_test_pids = n_pids - n_train_pids - n_query_pids
-        train_names, query_names, gallery_names = all_ids[:n_train_pids], all_ids[n_train_pids:n_train_pids+n_query_pids], all_ids[n_train_pids+n_query_pids:]
 
-        train, num_train_tracklets, num_train_pids, num_train_imgs = self._process_data(train_names, min_seq_len=min_seq_len, relabel=True, max_seq_len=max_seq_len)
+        train, num_train_tracklets, num_train_pids, num_train_imgs = self._process_data(all_ids[:n_pids//2], 'train', min_seq_len=min_seq_len, relabel=True, max_seq_len=max_seq_len)
 
-        query, num_query_tracklets, num_query_pids, num_query_imgs = self._process_data(query_names, min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
+        query, num_query_tracklets, num_query_pids, num_query_imgs = self._process_data(all_ids[n_pids//2:], 'query', min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
 
-        gallery, num_gallery_tracklets, num_gallery_pids, num_gallery_imgs = self._process_data(gallery_names, min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
+        gallery, num_gallery_tracklets, num_gallery_pids, num_gallery_imgs = self._process_data(all_ids[n_pids//2:], 'gallery', min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
 
         num_imgs_per_tracklet = num_train_imgs + num_query_imgs + num_gallery_imgs
         min_num = np.min(num_imgs_per_tracklet)
         max_num = np.max(num_imgs_per_tracklet)
         avg_num = np.mean(num_imgs_per_tracklet)
 
-        num_total_pids = num_train_pids + num_query_pids + num_gallery_pids
+        num_total_pids = num_train_pids + num_query_pids
         num_total_tracklets = num_train_tracklets + num_query_tracklets + num_gallery_tracklets
 
         print("=> Viva loaded")
@@ -106,7 +102,7 @@ class Viva(object):
             c = int(temp['CAMERA'])
         return c
 
-    def _process_data(self, names, min_seq_len=0, relabel=False, max_seq_len=900):
+    def _process_data(self, names, dtype, min_seq_len=0, relabel=False, max_seq_len=900):
         tracklets = []
         num_imgs_per_tracklet = []
         if relabel: pid2label = {pid:label for label, pid in enumerate(names)}
@@ -115,6 +111,15 @@ class Viva(object):
         for pid in names:
             pid_path = osp.join(self.root, pid)
             tracklet_paths = os.listdir(pid_path)
+            if dtype in ['query', 'gallery'] and len(tracklet_paths) ==1:
+                continue
+            else:
+                if dtype == 'query':
+                    tracklet_paths = [tracklet_paths[0],]
+                elif dtype == 'gallery':
+                    tracklet_paths = tracklet_paths[1:]
+                elif dtype == 'train':
+                    pass
             tracklet_paths = [osp.join(pid_path, t) for t in tracklet_paths]
             for t_path in tracklet_paths:
                 img_paths = list(self.list_pictures(t_path))
@@ -122,7 +127,7 @@ class Viva(object):
                 # make sure all images are captured under the same camera
                 camnames = [self.camera(p) for p in img_paths]
                 assert len(set(camnames)) == 1, "Error: images are captured under different cameras!"
-
+        
                 if len(img_paths) >= min_seq_len:
                     n_imgs = len(img_paths)
                     if n_imgs > max_seq_len:
