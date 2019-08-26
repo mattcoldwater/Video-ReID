@@ -1,4 +1,5 @@
 This is forked from https://github.com/jiyanggao/Video-Person-ReID
+All weights are [Here](https://drive.google.com/open?id=1kQxbbsMX5OJnNDl9sBQNrIjRkFbnc_5c)
 
 # Video-Person-ReID
 
