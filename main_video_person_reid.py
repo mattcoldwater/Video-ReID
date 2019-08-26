@@ -165,6 +165,13 @@ def main():
     elapsed = str(datetime.timedelta(seconds=elapsed))
     print("Finished. Total elapsed time (h:m:s): {}".format(elapsed))
 
+def get_cuts(n, max_seq_len=900):
+    cuts = n // max_seq_len # 8104 // 800 = 10           8000 // 800 = 10
+    cuts = [i*max_seq_len for i in range(cuts)] # 0 800 1600 .. 7200
+    cuts.append(len(cuts)*max_seq_len) # 0 800 1600 .. 7200 8000
+    if n > cuts[-1]: cuts.append(n) # 0 800 1600 .. 7200 8000 8104
+    return cuts
+
 def train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu):
     model.train()
     losses = AverageMeter()
@@ -200,8 +207,17 @@ def test(model, queryloader, galleryloader, pool, use_gpu, ranks=[1, 5, 10, 20])
             assert(b==1)
             imgs = imgs.view(b*n, s, c, h, w)
             with torch.no_grad():
-                if use_gpu: imgs = imgs.cuda()
-                features = model(imgs)
+                if n > 200:
+                    cuts = get_cuts(n, 200)
+                    features = list()
+                    for i in range(len(cuts)-1):
+                        img = imgs[cuts[i]:cuts[i+1]]
+                        if use_gpu: img = img.cuda()
+                        features.append(model(img))
+                    features = torch.cat(features, dim=0)
+                else:
+                    if use_gpu: imgs = imgs.cuda()
+                    features = model(imgs)
 
             features = features.view(n, -1)
             if pool == 'avg':

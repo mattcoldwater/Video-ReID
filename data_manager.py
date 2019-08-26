@@ -23,16 +23,15 @@ class Viva(object):
     
     Dataset statistics:
     # identities: 409
-    # tracklets: 502 (train) + 150 (query) + 208 (gallery)
+    # tracklets: 471 (train) + 145 (query) + 203 (gallery)
     # cameras: 2
 
     Args:
         min_seq_len (int): tracklet with length shorter than this value will be discarded (default: 0).
-        max_seq_len (int): tracklet with length shorter than this value will be splited (default: 900).
     """
     root = '../datasets/viva_dataset/viva_dataset'
 
-    def __init__(self, min_seq_len=0, max_seq_len=900):
+    def __init__(self, min_seq_len=0):
         self._check_before_run()
 
         all_ids = os.listdir(self.root)
@@ -45,11 +44,11 @@ class Viva(object):
         # split manually
         n_pids = len(all_ids)
 
-        train, num_train_tracklets, num_train_pids, num_train_imgs = self._process_data(all_ids[:n_pids//2], 'train', min_seq_len=min_seq_len, relabel=True, max_seq_len=max_seq_len)
+        train, num_train_tracklets, num_train_pids, num_train_imgs = self._process_data(all_ids[:n_pids//2], 'train', min_seq_len=min_seq_len, relabel=True)
 
-        query, num_query_tracklets, num_query_pids, num_query_imgs = self._process_data(all_ids[n_pids//2:], 'query', min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
+        query, num_query_tracklets, num_query_pids, num_query_imgs = self._process_data(all_ids[n_pids//2:], 'query', min_seq_len=min_seq_len, relabel=False)
 
-        gallery, num_gallery_tracklets, num_gallery_pids, num_gallery_imgs = self._process_data(all_ids[n_pids//2:], 'gallery', min_seq_len=min_seq_len, relabel=False, max_seq_len=max_seq_len)
+        gallery, num_gallery_tracklets, num_gallery_pids, num_gallery_imgs = self._process_data(all_ids[n_pids//2:], 'gallery', min_seq_len=min_seq_len, relabel=False)
 
         num_imgs_per_tracklet = num_train_imgs + num_query_imgs + num_gallery_imgs
         min_num = np.min(num_imgs_per_tracklet)
@@ -102,7 +101,7 @@ class Viva(object):
             c = int(temp['CAMERA'])
         return c
 
-    def _process_data(self, names, dtype, min_seq_len=0, relabel=False, max_seq_len=900):
+    def _process_data(self, names, dtype, min_seq_len=0, relabel=False):
         tracklets = []
         num_imgs_per_tracklet = []
         if relabel: pid2label = {pid:label for label, pid in enumerate(names)}
@@ -130,23 +129,10 @@ class Viva(object):
         
                 if len(img_paths) >= min_seq_len:
                     n_imgs = len(img_paths)
-                    if n_imgs > max_seq_len:
-                        cuts = n_imgs // max_seq_len # 8104 // 800 = 10           8000 // 800 = 10
-                        cuts = [i*max_seq_len for i in range(cuts)] # 0 800 1600 .. 7200
-                        cuts.append(len(cuts)*max_seq_len) # 0 800 1600 .. 7200 8000
-                        if n_imgs > cuts[-1]: cuts.append(n_imgs) # 0 800 1600 .. 7200 8000 8104
-                        for i in range(len(cuts)-1):
-                            img_path = img_paths[cuts[i]:cuts[i+1]]
-                            if len(img_path) >= min_seq_len:
-                                img_path = tuple(img_path)
-                                _pid = int(pid2label[pid]) if relabel else int(pid)
-                                tracklets.append((img_path, _pid, camnames[0]))
-                                num_imgs_per_tracklet.append(len(img_path))  
-                    else:
-                        img_paths = tuple(img_paths)
-                        _pid = int(pid2label[pid]) if relabel else int(pid)
-                        tracklets.append((img_paths, _pid, camnames[0]))
-                        num_imgs_per_tracklet.append(n_imgs)  
+                    img_paths = tuple(img_paths)
+                    _pid = int(pid2label[pid]) if relabel else int(pid)
+                    tracklets.append((img_paths, _pid, camnames[0]))
+                    num_imgs_per_tracklet.append(n_imgs)  
 
         num_tracklets = len(tracklets)
         num_pids = len(names)
