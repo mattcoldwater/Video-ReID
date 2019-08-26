@@ -21,3 +21,15 @@ Model size: 23.92603M
 ==> Epoch 2/800
 ==> Test
 Extracted features for set, obtained 145-by-2048 matrix
+Extracted features for set, obtained 203-by-2048 matrix
+Computing distance matrix
+Computing CMC and mAP
+Results ----------
+mAP: 70.4%
+CMC curve
+Rank-1  : 64.8%
+Rank-5  : 80.5%
+Rank-10 : 86.7%
+Rank-20 : 90.6%
+------------------
+==> Epoch 3/800
