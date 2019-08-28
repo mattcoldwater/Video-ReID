@@ -2,12 +2,13 @@ This is forked from https://github.com/jiyanggao/Video-Person-ReID
 All available weights are [Here](https://drive.google.com/open?id=1kQxbbsMX5OJnNDl9sBQNrIjRkFbnc_5c)
 
 Train:  
-`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp`  
+`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp_mars`  
 Test:  
-`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp --resume --evaluate`  
+`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp_mars --resume --evaluate`  
 Claculating similarity score:  
-`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp --resume --simi --use-cpu`  
-
+`python main_video_person_reid.py --simi --path test_imgs --resume -d viva --arch resnet50tp --save-dir log/resnet50tp_viva`  
+`python main_video_person_reid.py --simi --path test_imgs --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars`  
+`python main_video_person_reid.py --simi --path ../new_vivadata/384568.track --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars`   
 See opt.py and below for more detailed instruction of running code on the command line.  
 
 # Video-Person-ReID
@@ -59,7 +60,10 @@ I found that learning rate has a significant impact on the final performance. He
 Other detailed settings for different temporal modeling could be found in `models/ResNet.py`
 
 ### Similarity score
-For calculating similarity score of 2 tracklets, set args.path1 and args.path2 for 2 tracklets' file paths separately.
+`--simi ` to enable similarity mode  
+`--path test_imgs`: For calculating similarity score of tracklets, set args.path as the path of all tracklets, the path structure should be like ./identity_**/tracklet_**/***.png  
+`-d mars` and `--save-dir log/resnet50tp_mars` and `--arch resnet50tp` should be consistent: it means you used mars datasets to train resnet50tp model  
+The result will be saved in `result.csv`
 
 ### Performance of the paper
 

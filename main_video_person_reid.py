@@ -283,6 +283,7 @@ def simi(model, args, transform_test, use_gpu):
     root_path_len = len(Path(root).parts)
     tpaths = [Path(tpath) for tpath, _, __ in os.walk(root)]
     tpaths = [tpath for tpath in tpaths if len(tpath.parts) - 2 == root_path_len]
+    tpaths = tpaths[:10]
 
     tracklets = []
     for tpath in tpaths:

@@ -1,13 +1,13 @@
 import argparse
 
 ## test
-# python main_video_person_reid.py --evaluate --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
+# python main_video_person_reid.py --evaluate --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp_mars
 ## train
-# python main_video_person_reid.py --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
-# python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp
+# python main_video_person_reid.py --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp_mars
+# python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp_mars
 ## similarity score
-# python main_video_person_reid.py --simi --path test_imgs --resume -d mars --arch resnet50tp --save-dir log/resnet50tp
-# python main_video_person_reid.py --simi --path ../new_vivadata/384568.track --resume -d mars --arch resnet50tp --save-dir log/resnet50tp
+# python main_video_person_reid.py --simi --path test_imgs --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars
+# python main_video_person_reid.py --simi --path ../new_vivadata/384568.track --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars
 
 parser = argparse.ArgumentParser(description='Train video model')
 # Datasets
