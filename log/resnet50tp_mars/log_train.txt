@@ -6,3 +6,4 @@ Initializing model: resnet50tp
 Model size: 24.78866M
 Loading from Epoch 650
 Calculating similarity scores only
+Extracted features for set, obtained 1154-by-2048 matrix
