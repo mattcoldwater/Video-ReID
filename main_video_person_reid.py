@@ -185,8 +185,8 @@ def extract_features(model, data_loader, use_gpu, pool='avg'):
         assert(b==1)
         imgs = imgs.view(b*n, s, c, h, w)
         with torch.no_grad():
-            if n > 200:
-                cuts = get_cuts(n, 200)
+            if n > 100:
+                cuts = get_cuts(n, 100)
                 features = list()
                 for i in range(len(cuts)-1):
                     img = imgs[cuts[i]:cuts[i+1]]
