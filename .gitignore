@@ -4,6 +4,3 @@
 # some local files
 *.pyc
 *.tar
-*.txt
-!/log/resnet50tp_viva/log_test.txt
-!/log/resnet50tp_viva/log_train.txt
