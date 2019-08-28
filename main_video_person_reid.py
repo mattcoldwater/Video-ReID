@@ -135,7 +135,7 @@ def main():
     
     if args.simi:
         print('Calculating similarity scores only')
-        simi(model, args, transform_test, use_gpu)
+        simi(model, args, transform_test, use_gpu, os.path.join(args.save_dir, Path(args.path).parts[-1]))
         return
 
     if args.evaluate:
@@ -276,14 +276,16 @@ def test(model, queryloader, galleryloader, pool, use_gpu, ranks=[1, 5, 10, 20])
 
     return cmc[0]
 
-def simi(model, args, transform_test, use_gpu):
+def simi(model, args, transform_test, use_gpu, save_dir):
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     root = args.path
     model.eval()
 
     root_path_len = len(Path(root).parts)
     tpaths = [Path(tpath) for tpath, _, __ in os.walk(root)]
     tpaths = [tpath for tpath in tpaths if len(tpath.parts) - 2 == root_path_len]
-    tpaths = tpaths[:10]
+    # tpaths = tpaths[:10]
 
     tracklets = []
     for tpath in tpaths:
@@ -308,7 +310,7 @@ def simi(model, args, transform_test, use_gpu):
 
     t_names = [tpath.parts[-2]+'/'+tpath.parts[-1] for tpath in tpaths]
     distdf = pd.DataFrame(distmat, columns=t_names, index=t_names)
-    distdf.to_csv('result.csv')
+    distdf.to_csv(os.path.join(save_dir, 'result.csv'))
 
 if __name__ == '__main__':
     main()

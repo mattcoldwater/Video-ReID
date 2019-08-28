@@ -2,9 +2,11 @@ This is forked from https://github.com/jiyanggao/Video-Person-ReID
 All available weights are [Here](https://drive.google.com/open?id=1kQxbbsMX5OJnNDl9sBQNrIjRkFbnc_5c)
 
 Train:  
+`python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp_viva`  
 `python main_video_person_reid.py -d mars --arch resnet50tp --save-dir log/resnet50tp_mars`  
 Test:  
 `python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp_viva --resume --evaluate`  
+`python main_video_person_reid.py -d mars --arch resnet50tp --save-dir log/resnet50tp_mars --resume --evaluate`  
 Claculating similarity score:  
 `python main_video_person_reid.py --simi --path test_imgs --resume -d viva --arch resnet50tp --save-dir log/resnet50tp_viva`  
 `python main_video_person_reid.py --simi --path test_imgs --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars`  
@@ -75,12 +77,18 @@ The result will be saved in `result.csv`
 | rnn    |   73.9 | 81.6 | 92.8 | 94.7 | 96.3 |
 | 3d conv    |  70.5 | 78.5 | 90.9 | 93.9 | 95.9 |
 
-### Performance of my result
+### Performance of my result on Mars
 
 | Model            | mAP |CMC-1 | CMC-5 | CMC-10 | CMC-20 |
 | :--------------- | ----------: | ----------: | ----------: | ----------: | ----------: | 
 | pooling    |   76.3  | 82.2 | 93.5 | 95.7 | 96.7   |
 | attention    |  75.7 | 82.2 | 93.3 | 95.7 | 97.1 |
+
+### Performance of my result on Viva_dataset
+
+| Model            | mAP |CMC-1 | CMC-5 | CMC-10 | CMC-20 |
+| :--------------- | ----------: | ----------: | ----------: | ----------: | ----------: | 
+| pooling    |   93.2  | 92.2 | 97.7 | 97.2 | 100.0  |
 
 ### Prerequisites
 * Linux kernel 4.15.0-58-generic
