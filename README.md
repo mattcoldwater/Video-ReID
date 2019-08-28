@@ -61,7 +61,7 @@ Other detailed settings for different temporal modeling could be found in `model
 
 ### Similarity score
 `--simi ` to enable similarity mode  
-`--path test_imgs`: For calculating similarity score of tracklets, set args.path as the path of all tracklets, the path structure should be like ./identity_**/tracklet_**/***.png  
+`--path test_imgs`: For calculating similarity score of tracklets, set args.path as the path of all tracklets, the path structure should be like ./identity_xx/tracklet_xx/xxx.png  
 `-d mars` and `--save-dir log/resnet50tp_mars` and `--arch resnet50tp` should be consistent: it means you used mars datasets to train resnet50tp model  
 The result will be saved in `result.csv`
 
