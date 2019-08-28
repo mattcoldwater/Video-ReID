@@ -1,9 +1,0 @@
-==========
-Args:Namespace(arch='resnet50tp', dataset='mars', eval_step=100, evaluate=False, gamma=0.1, gpu_devices='1', height=224, htri_only=False, lr=0.0003, margin=0.3, max_epoch=800, num_instances=4, path='../new_vivadata/401670.track/', pool='avg', pretrained_model='3dconv-person-reid/pretrained_models/resnet-50-kinetics.pth', print_freq=80, resume=True, save_dir='log/resnet50tp_mars', seed=1, seq_len=4, simi=True, start_epoch=0, stepsize=200, test_batch=1, train_batch=32, use_cpu=False, weight_decay=0.0005, width=112, workers=8)
-==========
-Currently using GPU 1
-Initializing model: resnet50tp
-Model size: 24.78866M
-Loading from Epoch 650
-Calculating similarity scores only
-Extracted features for set, obtained 1154-by-2048 matrix
