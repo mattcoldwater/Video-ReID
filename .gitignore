@@ -6,3 +6,4 @@
 *.tar
 *.csv
 *.txt
+!/log/resnet50tp_viva/log_test.txt
