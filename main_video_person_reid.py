@@ -25,6 +25,7 @@ from samplers import RandomIdentitySampler
 from tqdm import tqdm
 from opt import args
 from pathlib import Path
+import pandas as pd
 
 import gc
 
@@ -134,19 +135,7 @@ def main():
     
     if args.simi:
         print('Calculating similarity scores only')
-        data1 = [(tuple(list(Path(args.path1).glob('**/*.[jp][pn][g]'))), 0, 0), ]
-        data2 = [(tuple(list(Path(args.path2).glob('**/*.[jp][pn][g]'))), 0, 1), ]
-        loader1 = DataLoader(
-            VideoDataset(data1, seq_len=args.seq_len, sample='dense', transform=transform_test),
-            batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
-            pin_memory=pin_memory, drop_last=False,
-        )
-        loader2 = DataLoader(
-            VideoDataset(data2, seq_len=args.seq_len, sample='dense', transform=transform_test),
-            batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
-            pin_memory=pin_memory, drop_last=False,
-        )
-        test(model, loader1, loader2, args.pool, use_gpu, dtype='simi')
+        simi(model, args, transform_test, use_gpu)
         return
 
     if args.evaluate:
@@ -188,6 +177,44 @@ def main():
     elapsed = str(datetime.timedelta(seconds=elapsed))
     print("Finished. Total elapsed time (h:m:s): {}".format(elapsed))
 
+def extract_features(model, data_loader, use_gpu, pool='avg'):
+    model.eval()
+    qf, q_pids, q_camids = [], [], []
+    for batch_idx, (imgs, pids, camids) in enumerate(tqdm(data_loader)):
+        b, n, s, c, h, w = imgs.size()
+        assert(b==1)
+        imgs = imgs.view(b*n, s, c, h, w)
+        with torch.no_grad():
+            if n > 200:
+                cuts = get_cuts(n, 200)
+                features = list()
+                for i in range(len(cuts)-1):
+                    img = imgs[cuts[i]:cuts[i+1]]
+                    if use_gpu: img = img.cuda()
+                    features.append(model(img))
+                features = torch.cat(features, dim=0)
+            else:
+                if use_gpu: imgs = imgs.cuda()
+                features = model(imgs)
+
+        features = features.view(n, -1)
+        if pool == 'avg':
+            features = torch.mean(features, 0)
+        else:
+            features, _ = torch.max(features, 0)
+        features = features.data.cpu()
+        qf.append(features)
+        q_pids.extend(pids)
+        q_camids.extend(camids)
+        del features, imgs, pids, camids
+        gc.collect()
+    qf = torch.stack(qf)
+    q_pids = np.asarray(q_pids)
+    q_camids = np.asarray(q_camids)
+
+    print("Extracted features for set, obtained {}-by-{} matrix".format(qf.size(0), qf.size(1)))
+    return qf, q_pids, q_camids
+
 def get_cuts(n, max_seq_len=900):
     cuts = n // max_seq_len # 8104 // 800 = 10           8000 // 800 = 10
     cuts = [i*max_seq_len for i in range(cuts)] # 0 800 1600 .. 7200
@@ -220,48 +247,11 @@ def train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu
         if (batch_idx+1) % args.print_freq == 0:
             print("Batch {}/{}\t Loss {:.6f} ({:.6f})".format(batch_idx+1, len(trainloader), losses.val, losses.avg))
 
-def test(model, queryloader, galleryloader, pool, use_gpu, dtype='test', ranks=[1, 5, 10, 20]):
+def test(model, queryloader, galleryloader, pool, use_gpu, ranks=[1, 5, 10, 20]):
     model.eval()
 
-    def extract_features(data_loader, pool='avg'):
-        qf, q_pids, q_camids = [], [], []
-        for batch_idx, (imgs, pids, camids) in enumerate(tqdm(data_loader)):
-            b, n, s, c, h, w = imgs.size()
-            assert(b==1)
-            imgs = imgs.view(b*n, s, c, h, w)
-            with torch.no_grad():
-                if n > 200:
-                    cuts = get_cuts(n, 200)
-                    features = list()
-                    for i in range(len(cuts)-1):
-                        img = imgs[cuts[i]:cuts[i+1]]
-                        if use_gpu: img = img.cuda()
-                        features.append(model(img))
-                    features = torch.cat(features, dim=0)
-                else:
-                    if use_gpu: imgs = imgs.cuda()
-                    features = model(imgs)
-
-            features = features.view(n, -1)
-            if pool == 'avg':
-                features = torch.mean(features, 0)
-            else:
-                features, _ = torch.max(features, 0)
-            features = features.data.cpu()
-            qf.append(features)
-            q_pids.extend(pids)
-            q_camids.extend(camids)
-            del features, imgs, pids, camids
-            gc.collect()
-        qf = torch.stack(qf)
-        q_pids = np.asarray(q_pids)
-        q_camids = np.asarray(q_camids)
-
-        print("Extracted features for set, obtained {}-by-{} matrix".format(qf.size(0), qf.size(1)))
-        return qf, q_pids, q_camids
-
-    qf, q_pids, q_camids = extract_features(queryloader)
-    gf, g_pids, g_camids = extract_features(galleryloader, pool=pool)
+    qf, q_pids, q_camids = extract_features(model, queryloader, use_gpu, pool=pool)
+    gf, g_pids, g_camids = extract_features(model, galleryloader, use_gpu, pool=pool)
     del queryloader, galleryloader
     gc.collect()
 
@@ -274,10 +264,6 @@ def test(model, queryloader, galleryloader, pool, use_gpu, dtype='test', ranks=[
     del qf, gf 
     gc.collect()
 
-    if dtype == 'simi':
-        print(distmat)
-        return
-
     print("Computing CMC and mAP")
     cmc, mAP = evaluate(distmat, q_pids, g_pids, q_camids, g_camids)
 
@@ -289,6 +275,39 @@ def test(model, queryloader, galleryloader, pool, use_gpu, dtype='test', ranks=[
     print("------------------")
 
     return cmc[0]
+
+def simi(model, args, transform_test, use_gpu):
+    root = args.path
+    model.eval()
+
+    root_path_len = len(Path(root).parts)
+    tpaths = [Path(tpath) for tpath, _, __ in os.walk(root)]
+    tpaths = [tpath for tpath in tpaths if len(tpath.parts) - 2 == root_path_len]
+
+    tracklets = []
+    for tpath in tpaths:
+        img_paths = list(Path(tpath).glob('**/*.[pj][np]g'))
+        tracklets.append((tuple(img_paths), 0, 0))
+    loader = DataLoader(
+        VideoDataset(tracklets, seq_len=args.seq_len, sample='dense', transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=False, drop_last=False,
+    )
+
+    f, _pids, _camids = extract_features(model, loader, use_gpu)
+    del loader, model
+    gc.collect()
+    n = f.size(0)
+    tmp = torch.pow(f, 2).sum(dim=1, keepdim=True).expand(n, n)
+    distmat = tmp + tmp.t()
+    distmat.addmm_(1, -2, f, f.t())
+    distmat = distmat.numpy()
+    del f
+    gc.collect()
+
+    t_names = [tpath.parts[-2]+'/'+tpath.parts[-1] for tpath in tpaths]
+    distdf = pd.DataFrame(distmat, columns=t_names, index=t_names)
+    distdf.to_csv('result.csv')
 
 if __name__ == '__main__':
     main()

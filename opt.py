@@ -5,6 +5,9 @@ import argparse
 ## train
 # python main_video_person_reid.py --use-cpu -d mars --resume --arch resnet50tp --save-dir log/resnet50tp
 # python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp
+## similarity score
+# python main_video_person_reid.py --simi --path test_imgs --resume -d mars --arch resnet50tp --save-dir log/resnet50tp
+# python main_video_person_reid.py --simi --path ../new_vivadata/384568.track --resume -d mars --arch resnet50tp --save-dir log/resnet50tp
 
 parser = argparse.ArgumentParser(description='Train video model')
 # Datasets
@@ -53,7 +56,6 @@ parser.add_argument('--save-dir', type=str, default='log', help='must match wher
 parser.add_argument('--use-cpu', action='store_true', help="use cpu")
 parser.add_argument('--gpu-devices', default='1', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--resume', action='store_true', help="use best model before")
-parser.add_argument('--path1', type=str, default="test_imgs/0", help="tracklet1")
-parser.add_argument('--path2', type=str, default="test_imgs/1", help="tracklet2")
+parser.add_argument('--path', type=str, default="test_imgs", help="data path for similarity comparison")
 
 args = parser.parse_args()
