@@ -22,10 +22,13 @@ from losses import CrossEntropyLabelSmooth, TripletLoss
 from utils import AverageMeter, Logger, save_checkpoint
 from eval_metrics import evaluate
 from samplers import RandomIdentitySampler
+
 from tqdm import tqdm
 from opt import args
 from pathlib import Path
 import pandas as pd
+from sklearn.metrics import auc
+from matplotlib import pyplot as plt
 
 import gc
 
@@ -133,6 +136,11 @@ def main():
     if use_gpu:
         model = nn.DataParallel(model).cuda()
     
+    if args.roc:
+        print("Calculating ROC curve only")
+        roc(model, queryloader, galleryloader, args.pool, use_gpu, args.save_dir)
+        return
+
     if args.simi:
         print('Calculating similarity scores only')
         simi(model, args, transform_test, use_gpu, os.path.join(args.save_dir, Path(args.path).parts[-1]))
@@ -185,8 +193,8 @@ def extract_features(model, data_loader, use_gpu, pool='avg'):
         assert(b==1)
         imgs = imgs.view(b*n, s, c, h, w)
         with torch.no_grad():
-            if n > 100:
-                cuts = get_cuts(n, 100)
+            if b*n*s > 64:
+                cuts = get_cuts(n, 64//(b*s))
                 features = list()
                 for i in range(len(cuts)-1):
                     img = imgs[cuts[i]:cuts[i+1]]
@@ -208,6 +216,7 @@ def extract_features(model, data_loader, use_gpu, pool='avg'):
         q_camids.extend(camids)
         del features, imgs, pids, camids
         gc.collect()
+        # if batch_idx > 10: break
     qf = torch.stack(qf)
     q_pids = np.asarray(q_pids)
     q_camids = np.asarray(q_camids)
@@ -311,6 +320,84 @@ def simi(model, args, transform_test, use_gpu, save_dir):
     t_names = [tpath.parts[-2]+'/'+tpath.parts[-1] for tpath in tpaths]
     distdf = pd.DataFrame(distmat, columns=t_names, index=t_names)
     distdf.to_csv(os.path.join(save_dir, 'result.csv'))
+
+def roc(model, queryloader, galleryloader, pool, use_gpu, save_dir):
+    if not os.path.exists(save_dir): os.mkdir(save_dir)
+    model.eval()
+
+    qf, q_pids, q_camids = extract_features(model, queryloader, use_gpu, pool=pool)
+    gf, g_pids, g_camids = extract_features(model, galleryloader, use_gpu, pool=pool)
+    f = torch.cat((qf, gf), dim=0)
+    pids = np.concatenate((q_pids, g_pids), axis=0)
+    camids = np.concatenate((q_camids, g_camids), axis=0)
+    del model, queryloader, galleryloader, qf, gf, q_pids, g_pids, q_camids, g_camids
+    gc.collect()
+
+    print("Computing distance matrix")
+
+    n = f.size(0)
+    tmp = torch.pow(f, 2).sum(dim=1, keepdim=True).expand(n, n)
+    distmat = tmp + tmp.t()
+    distmat.addmm_(1, -2, f, f.t())
+    distmat = distmat.numpy()
+    del f
+    gc.collect()
+
+    truemat = (pids == pids[:, np.newaxis])#.astype(np.int32)
+    del pids
+    gc.collect()
+    condition_pos = truemat.sum()
+    condition_neg = (~truemat).sum()
+
+    tholds = distmat.reshape(-1)
+    tholds.sort()
+    tns, tps = [], []
+    best_thold, best_dis = -1, 10000000
+    print('distance matrix:', 'max:', tholds[-1], 'min', tholds[0])
+    tholds = list(range(int(tholds[-1])+2))
+    for thold in tqdm(tholds):
+        pred_pos = (distmat + 1e-6) >= thold
+        true_pos = pred_pos & truemat
+        true_neg = (~pred_pos) & (~truemat)
+        true_pos_r = true_pos.sum() / condition_pos
+        false_neg_r = 1 - true_pos_r
+        true_neg_r = true_neg.sum() / condition_neg
+        false_pos_r = 1 - true_neg_r
+        tps.append(true_pos_r)
+        tns.append(true_neg_r)
+        if abs(true_pos_r - true_neg_r) < best_dis:
+            best_thold = thold
+            best_dis = abs(true_pos_r - true_neg_r)
+    tns = np.asarray(tns)
+    tps = np.asarray(tps)
+    print(save_dir, "Best threshold:", best_thold)
+
+    ## tp tn
+    plt.plot(tholds, tps*100, label='TP')
+    plt.plot(tholds, tns*100, label="TN")
+    plt.legend()
+    plt.xlabel('Threshold')
+    plt.ylabel('%')
+    plt.yticks(np.arange(0, 100, 5))
+    plt.grid(True)
+    plt.savefig(os.path.join(save_dir, 'TP_TN.png'))
+    plt.close()
+
+    ## roc
+    fps = 1 - tns
+    arg_ = np.argsort(fps)
+    fps = fps[arg_]
+    tps = tps[arg_]
+    auc_ = auc(fps, tps)
+    plt.plot(fps, tps)
+    plt.xticks(np.arange(0, 1, 0.1))
+    plt.yticks(np.arange(0, 1, 0.1))
+    plt.xlabel('FP')
+    plt.ylabel('TP')
+    plt.grid(True)
+    plt.savefig(os.path.join(save_dir, 'ROC.png'))
+    plt.close()
+    print(save_dir, 'AUC:', auc_)
 
 if __name__ == '__main__':
     main()

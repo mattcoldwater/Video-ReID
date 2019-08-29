@@ -8,6 +8,9 @@ import argparse
 ## similarity score
 # python main_video_person_reid.py --simi --path test_imgs --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars
 # python main_video_person_reid.py --simi --path ../new_vivadata/384568.track --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars
+## ROC curve
+# python main_video_person_reid.py --roc -d mars --resume --arch resnet50tp --save-dir log/resnet50tp_mars
+# python main_video_person_reid.py --roc -d viva --resume --arch resnet50tp --save-dir log/resnet50tp_viva
 
 parser = argparse.ArgumentParser(description='Train video model')
 # Datasets
@@ -57,5 +60,6 @@ parser.add_argument('--use-cpu', action='store_true', help="use cpu")
 parser.add_argument('--gpu-devices', default='1', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--resume', action='store_true', help="use best model before")
 parser.add_argument('--path', type=str, default="test_imgs", help="data path for similarity comparison")
+parser.add_argument('--roc', action='store_true', help="find the best threshold")
 
 args = parser.parse_args()

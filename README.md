@@ -7,10 +7,14 @@ Train:
 Test:  
 `python main_video_person_reid.py -d viva --arch resnet50tp --save-dir log/resnet50tp_viva --resume --evaluate`  
 `python main_video_person_reid.py -d mars --arch resnet50tp --save-dir log/resnet50tp_mars --resume --evaluate`  
-Claculating similarity score:  
+Calculating similarity score:  
 `python main_video_person_reid.py --simi --path test_imgs --resume -d viva --arch resnet50tp --save-dir log/resnet50tp_viva`  
 `python main_video_person_reid.py --simi --path test_imgs --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars`  
 `python main_video_person_reid.py --simi --path ../new_vivadata/384568.track --resume -d mars --arch resnet50tp --save-dir log/resnet50tp_mars`   
+Calculating the best threshold:  
+`python main_video_person_reid.py --roc -d mars --resume --arch resnet50tp --save-dir log/resnet50tp_mars`  
+`python main_video_person_reid.py --roc -d viva --resume --arch resnet50tp --save-dir log/resnet50tp_viva`  
+
 See opt.py and below for more detailed instruction of running code on the command line.  
 `-d mars` and `--save-dir log/resnet50tp_mars` and `--arch resnet50tp` should be consistent: it means you used mars datasets to train resnet50tp model  
 
@@ -67,6 +71,9 @@ Other detailed settings for different temporal modeling could be found in `model
 `--path test_imgs`: For calculating similarity score of tracklets, set args.path as the path of all tracklets, the path structure should be like ./identity_xx/tracklet_xx/xxx.png  
 The result will be saved in `result.csv`
 
+### Best threshold
+`--roc` to enable this mode, it will produce the best threshold, TP_TN.png and ROC.png.
+
 ### Performance of the paper
 
 | Model            | mAP |CMC-1 | CMC-5 | CMC-10 | CMC-20 |
@@ -89,6 +96,14 @@ The result will be saved in `result.csv`
 | Model            | mAP |CMC-1 | CMC-5 | CMC-10 | CMC-20 |
 | :--------------- | ----------: | ----------: | ----------: | ----------: | ----------: | 
 | pooling    |   93.2  | 92.2 | 97.7 | 97.2 | 100.0  |
+
+###
+#### Mars  
+log/resnet50tp_mars Best threshold: 285  
+log/resnet50tp_mars AUC: 0.30726125418013067  
+#### Viva  
+log/resnet50tp_viva Best threshold: 263  
+log/resnet50tp_viva AUC: 0.5124618830862768  
 
 ### Prerequisites
 * Linux kernel 4.15.0-58-generic
